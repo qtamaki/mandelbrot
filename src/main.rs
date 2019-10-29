@@ -1,14 +1,16 @@
 extern crate num;
 extern crate image;
 use num::Complex;
+use std::cell::Cell;
+use std::cell::RefCell;
 
 struct Mandelbrot {
     width: u32,
     height: u32,
-    lower_complex: Complex<f64>,
-    upper_complex: Complex<f64>,
-    distance_re: f64,
-    distance_im: f64,
+    lower_complex: RefCell<Complex<f64>>,
+    upper_complex: RefCell<Complex<f64>>,
+    distance_re: Cell<f64>,
+    distance_im: Cell<f64>,
 }
 
 
@@ -17,11 +19,18 @@ impl Mandelbrot {
         Mandelbrot {
             width: width,
             height: height,
-            lower_complex: lower_complex,
-            upper_complex: upper_complex,
-            distance_re: upper_complex.re  - lower_complex.re,
-            distance_im: upper_complex.im - lower_complex.im
+            lower_complex: RefCell::new(lower_complex),
+            upper_complex: RefCell::new(upper_complex),
+            distance_re: Cell::new(upper_complex.re  - lower_complex.re),
+            distance_im: Cell::new(upper_complex.im - lower_complex.im)
         }
+    }
+
+    fn enlarge(&self, lower_complex: Complex<f64>, upper_complex: Complex<f64>){
+        *self.lower_complex.borrow_mut() = lower_complex;
+        *self.upper_complex.borrow_mut() = upper_complex;
+        self.distance_re.set(upper_complex.re  - lower_complex.re);
+        self.distance_im.set(upper_complex.im - lower_complex.im);
     }
 
     fn diverge_time(&self, c: Complex<f64>, limit: u32) -> Option<u32> {
@@ -36,12 +45,12 @@ impl Mandelbrot {
     }
 
     fn pixel_to_point(&self, x: u32, y:u32) -> Complex<f64> {
-        let xf = self.lower_complex.re + x as f64 * self.distance_re / self.width as f64;
-        let yf = self.lower_complex.im + y as f64 * self.distance_im / self.height as f64;
+        let xf = self.lower_complex.borrow().re + x as f64 * self.distance_re.get() / self.width as f64;
+        let yf = self.lower_complex.borrow().im + y as f64 * self.distance_im.get() / self.height as f64;
         Complex{re: xf, im: yf}
     } 
 
-    fn draw(&self) {
+    fn draw(&self, image_name: &str) {
         let mut imgbuf = image::ImageBuffer::new(self.width, self.height);
         for(x,y,pixel) in imgbuf.enumerate_pixels_mut(){
             let c = self.pixel_to_point(x,y);
@@ -51,7 +60,7 @@ impl Mandelbrot {
                 Some(i) => *pixel = image::Rgb([255 - i as u8 ,255 - i as u8, 255-i as u8]),
             };
         }
-        imgbuf.save("mandelbrot.png").unwrap();
+        imgbuf.save(image_name).unwrap();
     }
 }
 
@@ -60,9 +69,13 @@ fn main() {
     let imgx = 1000;
     let imgy = 1000;
 
-    let lower_complex = Complex{ re: -1.20, im: 0.35 };
-    let upper_complex = Complex{ re: -1.0, im: 0.20 };
-
+    let lower_complex = Complex{ re: -2.0, im: -2.0 };
+    let upper_complex = Complex{ re: 2.0, im: 2.0 };
     let mand = Mandelbrot::new(imgx, imgy, lower_complex, upper_complex);
-    mand.draw();
+    mand.draw("mandelbrot.png");
+
+    let lower_complex_new = Complex{ re: -1.0, im: -1.0 };
+    let upper_complex_new = Complex{ re: 1.0, im: 1.0 };
+    mand.enlarge(lower_complex_new, upper_complex_new);
+    mand.draw("mandelbrot_new.png");
 }
