@@ -33,6 +33,14 @@ impl Mandelbrot {
         self.distance_im.set(upper_complex.im - lower_complex.im);
     }
 
+    fn resize(&self){
+        let lower_complex = Complex{re: self.lower_complex.borrow().re + self.distance_re.get() * 0.19,
+                                    im: self.lower_complex.borrow().im + self.distance_im.get() * 0.13 }; 
+        let upper_complex = Complex{re: self.upper_complex.borrow().re - self.distance_re.get() * 0.21,
+                                    im: self.upper_complex.borrow().im - self.distance_im.get() * 0.27 };    
+        self.enlarge(lower_complex, upper_complex);                      
+    }
+
     fn diverge_time(&self, c: Complex<f64>, limit: u32) -> Option<u32> {
         let mut z = Complex {re: 0.0, im: 0.0 };
         for i in 0..limit {
@@ -72,10 +80,11 @@ fn main() {
     let lower_complex = Complex{ re: -2.0, im: -2.0 };
     let upper_complex = Complex{ re: 2.0, im: 2.0 };
     let mand = Mandelbrot::new(imgx, imgy, lower_complex, upper_complex);
-    mand.draw("mandelbrot.png");
 
-    let lower_complex_new = Complex{ re: -1.0, im: -1.0 };
-    let upper_complex_new = Complex{ re: 1.0, im: 1.0 };
-    mand.enlarge(lower_complex_new, upper_complex_new);
-    mand.draw("mandelbrot_new.png");
+    for i in 0..10 {
+        println!("{}",i);
+        let s = format!("png/mand_{:04}.png", i);
+        mand.draw(&s);
+        mand.resize();
+    }
 }
